@@ -1,0 +1,15 @@
+#!/usr/bin/python
+
+import os
+
+def isGitDirectory():
+	cwd = os.getcwd()
+	return os.path.isfile(cwd + ".git")
+
+def main():
+	if isGitDirectory():
+		print "YES"
+	else:
+		print "NO"
+
+main()
