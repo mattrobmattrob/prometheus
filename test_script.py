@@ -4,4 +4,4 @@ def fun(x):
     return x + 1
 
 def test_fun():
-    assert fun(3) == 4
+    assert fun(2) == 4
