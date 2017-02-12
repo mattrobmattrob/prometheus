@@ -8,7 +8,46 @@ import subprocess
 
 def update_sections_with_matching_prefix(file, prefixes):
 	for prefix in prefixes:
-		print prefix
+		pattern = re.compile("^" + prefix)
+
+		valid_lines = []
+		valid_line_numbers = []
+		for i, line in enumerate(open(file)):
+			if i - 1 in valid_line_numbers:
+				# continue searching for end of section
+				pass
+			else:
+				# process any matches in the middle/beginning of the file
+				alphabetize_lines_in_file(valid_line_numbers, valid_lines, file)
+				# reset state since we've ended a stretch of matching lines
+				valid_line_numbers = []
+				valid_lines = []
+
+			for match in re.finditer(pattern, line):
+				valid_line_numbers.append(i)
+				valid_lines.append(line)
+				# print 'Found on line %s: %s' % (i+1, match.groups())
+		# process any matches at the end of the file
+		alphabetize_lines_in_file(valid_line_numbers, valid_lines, file)
+
+
+def alphabetize_lines_in_file(line_numbers, lines, file_name):
+	if len(line_numbers) > 1:
+		sorted_lines = sorted(lines, key=lambda s: s.lower())
+
+		with open(file_name, 'r') as file:
+			# read a list of lines into data
+			data = file.readlines()
+
+			# overwrite shifted lines
+			i = 0
+			for line_number in line_numbers:
+				data[line_number] = sorted_lines[i]
+				i = i + 1
+
+			# and write everything back
+			with open(file_name, 'w') as file:
+				file.writelines(data)
 
 ####### GIT #######
 
@@ -25,7 +64,11 @@ def changed_files_with_suffix(suffix):
 			# split based on the variable spaces between suffix and file
 			# use ftp://www.kernel.org/pub/software/scm/git/docs/git-status.html as guide
 			file_name = re.split('^' + suffix + '[ M]' + ' ', current_file)[1]
-			modified_files.append(file_name)
+			# work around files with spaces like: '"directory/name of file"'
+			file_name = re.split("\"", file_name)
+			for value in file_name:
+				if value != '':
+					modified_files.append(value)
 	return modified_files
 
 def get_modified_files():
@@ -35,7 +78,8 @@ def get_added_files():
 	return changed_files_with_suffix('A')
 
 def get_all_changed_files():
-	return get_modified_files() + get_added_files()
+	files = get_modified_files() + get_added_files()
+	return files
 
 ####### MAIN #######
 
@@ -44,8 +88,8 @@ def main():
 		print "This directory doesn't contain a `.git` directory!"
 	else:
 		changed_files = get_all_changed_files()
+		# alphabetize all matching sections of all files
 		for changed_file in changed_files:
-			print changed_file
 			update_sections_with_matching_prefix(changed_file, ["@import", "@class", "#import", "@protocol"])
 
 main()
