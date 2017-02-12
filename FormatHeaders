@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import argparse
 import os
 import re
 import subprocess
@@ -81,15 +82,61 @@ def get_all_changed_files():
 	files = get_modified_files() + get_added_files()
 	return files
 
+def get_branch_diff_files(baseBranch, compareBranch):
+	files = subprocess.check_output(['git', 'diff', baseBranch + '...' + compareBranch, '--name-only'])
+	files = files.splitlines()
+	return files
+
+####### ARGUMENT PARSING #######
+
+class BaseBranchAction(argparse.Action):
+	def __call__(self, parser, namespace, values, option_string=None):
+		if namespace.compareBranch == "":
+			parser.error('Missing compare branch, required when specifying a base branch')
+		else:
+			namespace.baseBranch = values
+
 ####### MAIN #######
 
 def main():
+	parser = argparse.ArgumentParser(description="Alphabetize prefix matching sections in checked in, changed files or branch differences based on default prefixes or overridden values. Defaults to alphabetizing added and modified files.")
+	parser.add_argument('--base', dest='baseBranch', default="", action=BaseBranchAction, required=False, help='base branch for the diff, requires `--compare`')
+	parser.add_argument('--compare', dest='compareBranch', default="", action='store', required=False, help='compare branch for the diff')
+	parser.add_argument('--prefixes', dest='prefixes', nargs='+', default=[], action='append', required=False, help='prefixes to scan for alphabetizing')
+	args = parser.parse_args()
+
+	# grab parameters (base and compare branches along with potential prefix override)
+	baseBranch = args.baseBranch
+	compareBranch = args.compareBranch
+	# Assume Objective-C standard, if empty list
+	if args.prefixes == []:
+		prefixes = ["@import", "@class", "#import", "@protocol"]
+	else:
+		# these will be passed as array of array of strings
+		prefixes = args.prefixes[0]
+
+	# Block alphabetizing because no `.git` folder
 	if False == isGitDirectory():
 		print "This directory doesn't contain a `.git` directory!"
+
+	# Alphabetize branch diff files
+	elif compareBranch != "":
+		# Assume 'origin/master' if 'base' not-specified
+		if baseBranch == "":
+			baseBranch = 'origin/master'
+
+		# Get git branch diff files
+		diff_files = get_branch_diff_files(baseBranch, compareBranch)
+		# alphabetize all matching sections of all files
+		for diff_file in diff_files:
+			update_sections_with_matching_prefix(diff_file, prefixes)
+
+	# Alphabetize git checked in and changed files
 	else:
+		# Git changed files based alphabetize
 		changed_files = get_all_changed_files()
 		# alphabetize all matching sections of all files
 		for changed_file in changed_files:
-			update_sections_with_matching_prefix(changed_file, ["@import", "@class", "#import", "@protocol"])
+			update_sections_with_matching_prefix(changed_file, prefixes)
 
 main()
