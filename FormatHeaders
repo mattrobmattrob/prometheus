@@ -1,15 +1,51 @@
 #!/usr/bin/python
 
 import os
+import re
+import subprocess
 
+####### FILE SEARCHING/MANIPULATION #######
+
+def update_sections_with_matching_prefix(file, prefixes):
+	for prefix in prefixes:
+		print prefix
+
+####### GIT #######
+
+# ensure current directory has `.git` directory
 def isGitDirectory():
-	cwd = os.getcwd()
-	return os.path.isfile(cwd + ".git")
+	return os.path.isdir(".git")
+
+def changed_files_with_suffix(suffix):
+	files = subprocess.check_output(['git', 'status', '--porcelain'])
+	files = files.splitlines()
+	modified_files = []
+	for current_file in files:
+		if None != re.search('^' + suffix, current_file):
+			# split based on the variable spaces between suffix and file
+			# use ftp://www.kernel.org/pub/software/scm/git/docs/git-status.html as guide
+			file_name = re.split('^' + suffix + '[ M]' + ' ', current_file)[1]
+			modified_files.append(file_name)
+	return modified_files
+
+def get_modified_files():
+	return changed_files_with_suffix('M')
+
+def get_added_files():
+	return changed_files_with_suffix('A')
+
+def get_all_changed_files():
+	return get_modified_files() + get_added_files()
+
+####### MAIN #######
 
 def main():
-	if isGitDirectory():
-		print "YES"
+	if False == isGitDirectory():
+		print "This directory doesn't contain a `.git` directory!"
 	else:
-		print "NO"
+		changed_files = get_all_changed_files()
+		for changed_file in changed_files:
+			print changed_file
+			update_sections_with_matching_prefix(changed_file, ["@import", "@class", "#import", "@protocol"])
 
 main()
