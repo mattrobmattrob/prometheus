@@ -1,6 +1,6 @@
 # prometheus
 
-![Travis CI Status](https://travis-ci.org/mattrobmattrob/Format-ObjC-Declarations.svg?branch=master)
+![Travis CI Status](https://travis-ci.org/mattrobmattrob/prometheus.svg?branch=master)
 
 ### Format Objective-C Declarations
 
